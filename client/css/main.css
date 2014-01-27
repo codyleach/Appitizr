@@ -1,0 +1,21 @@
+body {
+ background: #fff;   
+}
+header nav ul {
+ float: right;
+ margin-top: 20px;
+}
+
+.about {
+    background: #F3F5F4;
+    color: #001D2D;
+    margin-top: 20px;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+.about img {
+    width: 260px;
+    height: 260px;
+    margin-left: 20px;
+}
