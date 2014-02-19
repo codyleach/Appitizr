@@ -23,6 +23,13 @@ var Main = function () {
     , template: 'app/views/main/index'
     });
   };
+  
+  this.parserTest = function (req, resp, params) {
+    this.respond({params: params}, {
+      format: 'html'
+    , template: 'app/views/main/parser-test'
+    });
+  };
 };
 
 exports.Main = Main;

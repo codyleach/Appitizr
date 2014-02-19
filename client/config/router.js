@@ -39,4 +39,5 @@ router.get('/').to('Main.index');
 //   this.get('/print(.:format)').to('Hemispheres.print');
 // });
 
+router.match('/main/parsertest', 'GET').to('Main.parserTest');
 exports.router = router;

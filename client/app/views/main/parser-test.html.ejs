@@ -1,0 +1,101 @@
+<div class="container">
+    <header class="row">
+        <h3 class="col-sm-12">Enter some HTML</h3>
+    </header>
+    <div class="row">
+        <div class="col-sm-12">
+            <textarea id="htmlContent" cols="150" rows="10"></textarea>
+            <button id="parseBtn">Parse it!</button>
+        </div>
+    </div>
+    <br /><br /><br /><br /><br />
+    <div class="row">
+        <h4 class="col-sm-12">Output:</h4>
+        <div id="output" class="col-sm-12">None!</div>
+    </div>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script>
+    function parseDataString(dataString) {
+        // Trim it up
+        var input = dataString.trim();
+        
+        // Get rid of any starting and ending braces
+        if (input.indexOf("{") === 0) {
+            input = input.substring(1);
+            input = input.substring(0, input.length - 1);
+            
+            // Trim it up again
+            //input = input.trim();
+        }
+        
+        // Define the patterns to match
+        var patterns = [
+            // Matches strings with lookahead for escaped characters
+            "'(?:[^'\\\\]|\\\\.)*'", 
+            '"(?:[^"\\\\]|\\\\.)*"',
+            "[:,(){}\\[\\]]",
+            "[^:,\\s(){}\\[\\]'\"]+",
+            "[^\\s]"
+            
+        ];
+        
+        // Create the regex object
+        var regExpObj = RegExp(patterns.join("|"), "g");
+        
+        // Create the matches array
+        var matches = input.match(regExpObj);
+        
+        // Define some variables used in the loop
+        var result = {};
+        var depth = 0;
+        var match = "";
+        var key = null;
+        
+        // Go through the matches
+        for (var i = 0; i < matches.length; i++) {
+            match = matches[0];
+            
+            // Ignore some of the special characters
+            switch(matches[0]) {
+                case ",": 
+                    
+                    break;
+                case ":":
+            }
+        }
+    }
+    
+    $("#parseBtn").click(function() {
+        // Get the HTML elements
+        var content = $("#htmlContent").val();
+        var output = $("#output");
+        var dataAttr = "apptzr";
+        
+        // Parse the content
+        var jContent = $(content);
+        
+        // Get the data attribute
+        var data = jContent.data(dataAttr);
+        
+        // Trim it up
+        data = data.trim();
+        
+        // Does it have starting and ending braces?
+        if (data.indexOf("{") !== 0) {
+            data = "{" + data + "}";
+        }
+        
+        var func = new Function("return " + data + ";");
+        console.log(func());
+        //output.html(data.match(regExpObj).join(""));
+        
+        // Can turn a function in a string into an executable function
+        // simply by doing "new Function([body of function])";
+        // Example:
+        // var a = "return function() { return 'blah'; }";
+        // var func = new Function(a);
+        // func()(); -> "blah"
+    });
+</script>
