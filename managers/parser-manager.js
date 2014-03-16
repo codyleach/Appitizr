@@ -1,6 +1,7 @@
 // Requirements
 var fileAccessor = require('../resource_accessors/file_accessor');
 var path = require('path');
+var htmlparser = require("htmlparser2");
 
 // Know where we are
 var rootPath = path.join(__dirname, '/..');
@@ -51,7 +52,55 @@ parserManager.prototype.getAllProperties = function(callback) {
 };
 
 parserManager.prototype.parseHtmlString = function(htmlString) {
+    var self = this;
+    var handler = new htmlparser.DomHandler(function (error, dom) {
+        if (error) {
+            console.error(error);
+        } else {
+            self.parseDomArray(dom);
+        }
+    });
+    var parser = new htmlparser.Parser(handler);
+    parser.write(htmlString);
+    parser.done();
+    // var parser = new htmlparser.Parser({
+    //     onopentag: function(name, attribs){
+    //         console.log("Open tag attribute: ");
+    //         console.log(attribs);
+    //         console.log(" ");
+    //     },
+    //     ontext: function(text){
+    //         console.log("Text: ");
+    //         console.log(text);
+    //         console.log(" ");
+    //     },
+    //     onclosetag: function(tagname){
+    //         console.log("Close tag: ");
+    //         console.log(tagname);
+    //         console.log(" ");
+    //     }
+    // });
+};
+
+parserManager.prototype.parseDomArray = function(domArray) {
+    var results = [];
     
+    // Go through each and parse it
+    for (var i = 0; i < domArray.length; i++) {
+        // Is this a type tag?
+        if (domArray[i].type == 'tag') {
+            // Does it have what we're looking for?
+            if (domArray[i].attribs.hasOwnProperty('data-appitizr')) {
+                // Get the value and add it to the results
+                console.log(domArray[i].attribs['data-appitizr']);
+            }
+            
+            // Go through the children
+            this.parseDomArray(domArray[i].children);
+        }
+    }
+    
+    return results;
 };
 
 var parserManagerInstance = new parserManager();
