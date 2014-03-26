@@ -6,7 +6,13 @@ var htmlparser = require("htmlparser2");
 // Know where we are
 var rootPath = path.join(__dirname, '/..');
 var configFilePath = path.join(rootPath, '/client/config.json');
-var attributeName = "data-admin";
+
+// Define some private variables
+var _attributeName = "data-admin";
+var _defaultSectionId = "section-";
+var _defaultSectionCount = 0;
+var _defaultComponentId = "component-";
+var _defaultComponentCount = 0;
 
 // Create the main function
 var parserManager = function() { };
@@ -15,9 +21,15 @@ var parserManager = function() { };
 parserManager.prototype.getAllProperties = function(callback) {
     // Setup some needed variables
     var self = this,
+        defaultSection = null,
         sections = {},
         filesToReadCount = 0,
         filesReadCount = 0;
+        
+    // Create the default section
+    defaultSection = createParentObject(_defaultSectionId + _defaultSectionCount);
+    sections[defaultSection.id] = defaultSection;
+    _defaultSectionCount++;
         
     // Read the config file
     fileAccessor.readFile(configFilePath, function(err, data) {
@@ -42,7 +54,7 @@ parserManager.prototype.getAllProperties = function(callback) {
         if (fileErr) {
             console.error(fileErr);
        } else {
-           self.parseHtmlString(fileData, sections);
+           self.parseHtmlString(fileData, sections, defaultSection);
            filesReadCount++;
        }
     }
@@ -52,13 +64,13 @@ parserManager.prototype.getAllProperties = function(callback) {
     }
 };
 
-parserManager.prototype.parseHtmlString = function(htmlString, resultObj) {
+parserManager.prototype.parseHtmlString = function(htmlString, root, parent) {
     var self = this;
     var handler = new htmlparser.DomHandler(function (error, dom) {
         if (error) {
             console.error(error);
         } else {
-            self.parseDomArray(dom, resultObj);
+            self.parseDomArray(dom, root, parent);
         }
     });
     var parser = new htmlparser.Parser(handler);
@@ -66,69 +78,70 @@ parserManager.prototype.parseHtmlString = function(htmlString, resultObj) {
     parser.done();
 };
 
-parserManager.prototype.parseDomArray = function(domArray, resultObj, section) {
-    var results = [];
+parserManager.prototype.parseDomArray = function(domArray, root, parent) {
+    var newParent = null;
     
     // Go through each and parse it
     for (var i = 0; i < domArray.length; i++) {
         // Is this a type tag?
         if (domArray[i].type == 'tag') {
             // Does it have what we're looking for?
-            if (domArray[i].attribs.hasOwnProperty(attributeName)) {
+            if (domArray[i].attribs.hasOwnProperty(_attributeName)) {
                 // Get the data string
-                var dataObj = this.convertStringToObject(domArray[i].attribs[attributeName]);
-                //var section = "default";
-                //var component = null;
+                var dataObj = this.convertStringToObject(domArray[i].attribs[_attributeName]);
                 
                 // Is a section being defined?
-                if (propExists(dataObj, 'type') && dataObj['type'].trim() == "section") {    
-                    // Yes, it's being defined, so add in some of the information
-                    if (!propExists(resultObj, dataObj['id'])) {
-                        // Sanitize the id
-                        var id = dataObj['id'].trim();
-                        
-                        // Need to create it
-                        resultObj[id] = {
-                            label: propExists(dataObj, 'label') ? dataObj['label'].trim() : id,
-                            items: []
-                        }
-                        
-                        section = id;
+                if (propExists(dataObj, 'type') && dataObj['type'].trim() == "section") {
+                    
+                    // Grab the id
+                    var id = dataObj['id'] ? dataObj['id'].trim() : null;
+                    
+                    if (!id) {
+                        id = _defaultSectionId + _defaultSectionCount;
+                        _defaultSectionCount++;
                     }
+                    
+                    // Yes, it's being defined, so add in some of the information
+                    if (!propExists(root, dataObj['id'])) {
+                        // Need to create it
+                        newParent = createParentObject(id, propExists(dataObj, 'label') ? dataObj['label'].trim() : id);
+                        
+                        root[id] = newParent;
+                    }
+                    
                 } else if (propExists(dataObj, 'type') && dataObj['type'].trim() == "component") {
-                    // TODO: Add component support
+                    // Grab the id
+                    var id = dataObj['id'] ? dataObj['id'].trim() : null;
+                    
+                    if (!id) {
+                        id = _defaultComponentId + _defaultComponentCount;
+                        _defaultComponentCount++;
+                    }
+                    
+                    // Need to create it
+                    newParent = createParentObject(id, propExists(dataObj, 'label') ? dataObj['label'].trim() : id);
+                    
+                    // Add it to the parent
+                    parent.items.push(newParent);
                     
                 } else {
-                    // Not defining a section, so it must be an item
-                    if (propExists(dataObj, 'section')) {
-                        section = dataObj['section'].trim();
-                    }
-                    
-                    // Does this section exist on the results object?
-                    if (!resultObj.hasOwnProperty(section)) {
-                        // Create this section on the results object
-                        resultObj[section] = {
-                            label: section,
-                            items: []
-                        };
-                    }
+                    // Get the contents
+                    dataObj['contents'] = getElementContents(domArray[i]);
                     
                     // Push this item as a child
-                    resultObj[section].items.push(dataObj);
+                    parent.items.push(dataObj);
                 }
                 
                 // Turn it into an object
                 console.log(dataObj);
-                console.log(resultObj);
+                console.log(parent);
                 console.log("");
             }
             
             // Go through the children
-            this.parseDomArray(domArray[i].children, resultObj, section);
+            this.parseDomArray(domArray[i].children, root, newParent ? newParent : parent);
         }
     }
-    
-    return results;
 };
 
 parserManager.prototype.convertStringToObject = function(dataString) {
@@ -150,7 +163,38 @@ parserManager.prototype.convertStringToObject = function(dataString) {
 }
 
 function propExists(obj, prop) {
-    return prop.trim() && obj.hasOwnProperty(prop);
+    return obj && prop.trim() && obj.hasOwnProperty(prop);
+}
+
+function createParentObject(id, label) {
+    return {
+        id: id,
+        label: label ? label : id,
+        items: []
+    };
+}
+
+function getElementContents(element) {
+    // What type of element is this?
+    if (element.type == "tag") {
+        // Is this an image?
+        if (element.name == "img") {
+            return element.attribs ? (element.attribs.src || null) : null;
+        }
+        
+        // Go through the children
+        var content = "";
+        for (var i = 0; i < element.children.length; i++) {
+            content += element.children[i].data ? element.children[i].data.toString() : "";
+        }
+        
+        return content;
+    } else if (element.type == "text") {
+        return element.data || null;
+    }
+    
+    // Not sure what this is
+    return null;
 }
 
 var parserManagerInstance = new parserManager();
