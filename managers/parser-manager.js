@@ -27,7 +27,7 @@ parserManager.prototype.getAllProperties = function(callback) {
         filesReadCount = 0;
         
     // Create the default section
-    defaultSection = createParentObject(_defaultSectionId + _defaultSectionCount);
+    defaultSection = createParentObject('section', _defaultSectionId + _defaultSectionCount);
     sections[defaultSection.id] = defaultSection;
     _defaultSectionCount++;
         
@@ -104,7 +104,7 @@ parserManager.prototype.parseDomArray = function(domArray, root, parent) {
                     // Yes, it's being defined, so add in some of the information
                     if (!propExists(root, dataObj['id'])) {
                         // Need to create it
-                        newParent = createParentObject(id, propExists(dataObj, 'label') ? dataObj['label'].trim() : id);
+                        newParent = createParentObject('section', id, propExists(dataObj, 'label') ? dataObj['label'].trim() : id);
                         
                         root[id] = newParent;
                     }
@@ -119,7 +119,7 @@ parserManager.prototype.parseDomArray = function(domArray, root, parent) {
                     }
                     
                     // Need to create it
-                    newParent = createParentObject(id, propExists(dataObj, 'label') ? dataObj['label'].trim() : id);
+                    newParent = createParentObject('component', id, propExists(dataObj, 'label') ? dataObj['label'].trim() : id);
                     
                     // Add it to the parent
                     parent.items.push(newParent);
@@ -166,9 +166,10 @@ function propExists(obj, prop) {
     return obj && prop.trim() && obj.hasOwnProperty(prop);
 }
 
-function createParentObject(id, label) {
+function createParentObject(type, id, label) {
     return {
         id: id,
+        type: type,
         label: label ? label : id,
         items: []
     };
